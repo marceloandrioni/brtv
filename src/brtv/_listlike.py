@@ -1,0 +1,279 @@
+"""Type annotations to be used with Pydantic validation."""
+
+from __future__ import annotations
+
+__all__ = ["ListLike"]
+
+from collections.abc import Callable
+from typing import (
+    Annotated,
+    Any,
+)
+
+from pydantic import (
+    AfterValidator,
+    BeforeValidator,
+    Field,
+    ValidationError,
+)
+
+from ._common import (
+    ValidatorsInStandardOrder,
+    validate_type,
+    validate_types_in_func_call,
+)
+
+
+class ListLike(ValidatorsInStandardOrder):
+    """Create a ListLike type for validating lists of objects with customizable constraints.
+
+    Validators are applied in this order below, regardless of the order in which
+    the arguments are provided by the user.
+
+    Parameters
+    ----------
+    item_type : Any
+        The type of items in the list. It can be a simple type (e.g.: Any, int,
+        float, str, another list, etc) or a custom type with its own validation
+        (e.g., `FloatLike(gt=0)`).
+    title : str, optional
+        Human-readable title.
+    description : str, optional
+        Human-readable description.
+    none_to_empty : bool, optional
+        Coerce None to empty list.
+    coerce_scalar : bool, optional
+        If True, single items that match the item_type will be coerced to
+        a list with one item. Useful for allowing both single items and lists of
+        items as input. If the input is ambiguous (i.e., it can be successfully
+        validated both as a `value` and `list[value]` against `item_type`),
+        an error will be raised.
+    min_length : int, optional
+        Minimum length of items in the list.
+    max_length : int, optional
+        Maximum length of items in the list.
+    length : int, optional
+        Exact length of items in the list.
+    unique_items : bool, optional
+        Raises an error if there are repeated items in the list.
+    sorted : bool, optional
+        Raises an error if list is not sorted.
+    sorted_reverse : bool, optional
+        Raises an error if list is not sorted in descending order.
+    sort : bool, optional
+        Sorts the list in ascending order.
+    sort_reverse : bool, optional
+        Sorts the list in descending order.
+
+    Returns
+    -------
+    Annotated
+        An annotated list type with the specified validation constraints applied.
+
+    Examples
+    --------
+    >>> validate_type(
+    ...     [2.2, 3, 4.1, 1],
+    ...     ListLike(float, min_length=2, unique_items=True, sort=True),
+    ... )
+    [1.0, 2.2, 3.0, 4.1]
+
+    >>> validate_type(
+    ...     2.2,
+    ...     ListLike(FloatLike(gt=0), coerce_scalar=True),
+    ... )
+    [2.2]
+
+    >>> @validate_types_in_func_call
+    ... def sum_list(values: ListLike(FloatLike(gt=0), min_length=2)) -> float:
+    ...     return sum(values)
+
+    """
+
+    @classmethod
+    @validate_types_in_func_call
+    def make_validator_none_to_empty(cls, none_to_empty: bool) ->  Callable[[Any], list[Any]]:
+
+        def validator(value: Any) -> list[Any]:
+            if none_to_empty and value is None:
+                return []
+            return value
+
+        return validator
+
+    @classmethod
+    @validate_types_in_func_call
+    def make_validator_coerce_scalar(
+        cls,
+        coerce_scalar: bool,
+        item_type: Any,
+    ) -> Callable[[Any], list[Any]]:
+
+        def validator(value: Any) -> list[Any]:
+
+            # Note: can't just check if is iterable because str, list[str],
+            # list[list[floats]], etc, are all valid situations. The only way is
+            # to actually try validating both as scalar and list.
+
+            if coerce_scalar:
+
+                try:
+                    validate_type(value, item_type)
+                    valid_as_scalar = True
+                except ValidationError:
+                    valid_as_scalar = False
+
+                try:
+                    validate_type([value], item_type)
+                    valid_as_list = True
+                except ValidationError:
+                    valid_as_list = False
+
+                if valid_as_scalar and valid_as_list:
+                    err_msg = (
+                        "Can't use `coerce_scalar=True` because the value is ambiguous."
+                        " Can be successfully validate both as `value` and `[value]`"
+                        f" against type `{item_type}`. Avoid using this option with"
+                        " broad type definitions like `Any`, `list[Any]`, etc."
+                    )
+                    raise ValueError(err_msg)
+
+                if valid_as_scalar:
+                    return [value]
+
+            return value
+
+        return validator
+
+    @classmethod
+    def iterable_to_list(cls, value: Any) -> list[float]:
+        try:
+            return list(value)
+        except TypeError:
+            err_msg = "Input should be an iterable that can be converted to a list."
+            raise ValueError(err_msg)
+
+    @classmethod
+    @validate_types_in_func_call
+    def make_validator_length(cls, length: int) -> Callable[[list[float]], list[float]]:
+
+        def validator(value: list[float]) -> list[float]:
+            if len(value) != length:
+                err_msg = f"List must have exactly {length} items."
+                raise ValueError(err_msg)
+            return value
+
+        return validator
+
+    @classmethod
+    @validate_types_in_func_call
+    def make_validator_unique_items(cls, unique_items: bool) -> Callable[[list[float]], list[float]]:
+
+        def validator(value: list[float]) -> list[float]:
+            if unique_items and len(value) != len(set(value)):
+                err_msg = "List items must be unique."
+                raise ValueError(err_msg)
+            return value
+
+        return validator
+
+    @classmethod
+    @validate_types_in_func_call
+    def make_validator_is_sorted(cls, is_sorted: bool) -> Callable[[list[float]], list[float]]:
+
+        def validator(value: list[float]) -> list[float]:
+            if is_sorted:
+                if sorted(value) == value:
+                    return value
+                err_msg = "List must be sorted."
+                raise ValueError(err_msg)
+            return value
+
+        return validator
+
+    @classmethod
+    @validate_types_in_func_call
+    def make_validator_is_sorted_reverse(cls, is_sorted_reverse: bool) -> Callable[[list[float]], list[float]]:
+
+        def validator(value: list[float]) -> list[float]:
+            if is_sorted_reverse:
+                if sorted(value, reverse=True) == value:
+                    return value
+                err_msg = "List must be sorted in reverse."
+                raise ValueError(err_msg)
+            return value
+
+        return validator
+
+    @classmethod
+    @validate_types_in_func_call
+    def make_validator_sort(cls, sort: bool) -> Callable[[list[float]], list[float]]:
+
+        def validator(value: list[float]) -> list[float]:
+            if sort:
+                return sorted(value)
+            return value
+
+        return validator
+
+    @classmethod
+    @validate_types_in_func_call
+    def make_validator_sort_reverse(cls, sort_reverse: bool) -> Callable[[list[float]], list[float]]:
+
+        def validator(value: list[float]) -> list[float]:
+            if sort_reverse:
+                return sorted(value, reverse=True)
+            return value
+
+        return validator
+
+    @validate_types_in_func_call
+    def __new__(
+        cls,
+        item_type: Any,
+        *,
+        title: str | None = None,
+        description: str | None = None,
+        none_to_empty: bool = False,
+        coerce_scalar: bool = False,
+        min_length: int | None = None,
+        max_length: int | None = None,
+        length: int | None = None,
+        unique_items: bool | None = None,
+        sorted: bool | None = None,
+        sorted_reverse: bool | None = None,
+        sort: bool | None = None,
+        sort_reverse: bool | None = None,
+    ):
+
+        before_validators = [
+            BeforeValidator(cls.make_validator_none_to_empty(none_to_empty)),
+            BeforeValidator(cls.make_validator_coerce_scalar(coerce_scalar, item_type)),
+            BeforeValidator(cls.iterable_to_list),
+        ][::-1]  # pydantic applies before validators in reversed order of declaration
+
+        field_validators = {
+            "title": title,
+            "description": description,
+            "min_length": min_length,
+            "max_length": max_length,
+            "fail_fast": True,  # stop at the first error in the list
+        }
+
+        after_validators_args = {
+            "length": length,
+            "unique_items": unique_items,
+            "sorted": sorted,
+            "sorted_reverse": sorted_reverse,
+            "sort": sort,
+            "sort_reverse": sort_reverse,
+        }
+
+        after_validators = cls._get_after_validators(after_validators_args)
+
+        return Annotated[
+            list[item_type],
+            *before_validators,
+            Field(**field_validators),
+            *after_validators,
+        ]

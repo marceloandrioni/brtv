@@ -1,0 +1,23 @@
+[project]
+name = "brtv"
+version = "0.1.0"
+description = "Type annotations to be used with Pydantic validation."
+readme = "README.md"
+authors = [
+    { name = "Marcelo Andrioni", email = "marceloandrioni@gmail.com" }
+]
+requires-python = ">=3.14"
+dependencies = [
+    "cerberus>=1.3.8",
+    "jellyfish>=1.2.1",
+    "multidict>=6.7.1",
+    "numpy>=2.4.2",
+    "pandas>=3.0.0",
+    "pandera>=0.29.0",
+    "pydantic>=2.12.5",
+    "xarray>=2026.1.0",
+]
+
+[build-system]
+requires = ["uv_build>=0.9.18,<0.10.0"]
+build-backend = "uv_build"
