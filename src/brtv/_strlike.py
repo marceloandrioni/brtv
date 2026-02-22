@@ -8,25 +8,18 @@ import re
 import unicodedata
 from collections.abc import Callable, Iterable
 from re import Pattern
-from typing import (
-    Annotated,
-    Any,
-)
+from typing import Any
 
 from multidict import MultiDict
-from pydantic import (
-    BeforeValidator,
-    Field,
-)
 
 from ._common import (
-    ValidatorsInUserOrder,
+    BaseLikeInUserOrder,
     _call_real_new,
     validate_types_in_func_call,
 )
 
 
-class StrLike(ValidatorsInUserOrder):
+class StrLike(BaseLikeInUserOrder):
     """Create a StrLike type for validating string values with customizable constraints.
 
     Validators are applied in the user requested order.
@@ -104,7 +97,10 @@ class StrLike(ValidatorsInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_none_to_empty(cls, none_to_empty: bool) -> Callable[[str], str]:
+    def make_validator_none_to_empty(
+        cls,
+        none_to_empty: bool,
+    ) -> Callable[[str], str]:
 
         def validator(value: Any) -> str:
             if none_to_empty and value is None:
@@ -148,7 +144,10 @@ class StrLike(ValidatorsInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_replace(cls, replace: tuple[str, str]) -> Callable[[str], str]:
+    def make_validator_replace(
+        cls,
+        replace: tuple[str, str],
+    ) -> Callable[[str], str]:
 
         def validator(value: str) -> str:
             return re.sub(*replace, value)
@@ -157,7 +156,10 @@ class StrLike(ValidatorsInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_remove_accents(cls, remove_accents: bool) -> Callable[[str], str]:
+    def make_validator_remove_accents(
+        cls,
+        remove_accents: bool,
+    ) -> Callable[[str], str]:
 
         def validator(value: str) -> str:
             if remove_accents:
@@ -196,7 +198,10 @@ class StrLike(ValidatorsInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_pattern(cls, pattern: str | Pattern[str]) -> Callable[[str], str]:
+    def make_validator_pattern(
+        cls,
+        pattern: str | Pattern[str],
+    ) -> Callable[[str], str]:
 
         def validator(value: str) -> str:
             if re.match(pattern, value):
@@ -252,45 +257,25 @@ class StrLike(ValidatorsInUserOrder):
         pass
 
     @classmethod
-    def _get_after_validators_keys(cls) -> list[str]:
-        return [
-            "strip",
-            "to_upper",
-            "to_lower",
-            "replace",
-            "remove_accents",
-            "startswith",
-            "endswith",
-            "pattern",
-            "min_length",
-            "max_length",
-        ]
-
-    @classmethod
     def _real_new(cls, config: MultiDict):
 
-        title = config.pop("title", None)
-        description = config.pop("description", None)
-        none_to_empty = config.pop("none_to_empty", False)
+        # Note: most of these validators could be called directly from
+        # StringConstraints, but since we want to allow users to specify the
+        # order of application, we need to reimplement them here.
 
-        before_validators = [
-            BeforeValidator(cls.make_validator_none_to_empty(none_to_empty)),
-        ][::-1]  # pydantic applies before validators in reversed order of declaration
+        before_validators_args = {
+            "none_to_empty": config.pop("none_to_empty", False),
+        }
 
-        field_validators = {
-            "title": title,
-            "description": description,
+        field_validators_args = {
+            "title": config.pop("title", None),
+            "description": config.pop("description", None),
             "strict": False,  # allow bytes, StrEnum
         }
 
-        # most of these options could be called with StringConstraints,
-        # but we want to allow the user to choose the order of application of
-        # the validators, so we have to reimplement it
-        after_validators = cls._get_after_validators(config)
-
-        return Annotated[
-            str,
-            *before_validators,
-            Field(**field_validators),
-            *after_validators,
-        ]
+        return cls._get_annotated(
+            type=str,
+            before_validators_args=before_validators_args,
+            field_validators_args=field_validators_args,
+            after_validators_args=config,
+        )

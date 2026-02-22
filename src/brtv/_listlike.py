@@ -5,26 +5,18 @@ from __future__ import annotations
 __all__ = ["ListLike"]
 
 from collections.abc import Callable
-from typing import (
-    Annotated,
-    Any,
-)
+from typing import Any
 
-from pydantic import (
-    AfterValidator,
-    BeforeValidator,
-    Field,
-    ValidationError,
-)
+from pydantic import ValidationError
 
 from ._common import (
-    ValidatorsInStandardOrder,
+    BaseLike,
     validate_type,
     validate_types_in_func_call,
 )
 
 
-class ListLike(ValidatorsInStandardOrder):
+class ListLike(BaseLike):
     """Create a ListLike type for validating lists of objects with customizable constraints.
 
     Validators are applied in this order below, regardless of the order in which
@@ -92,7 +84,10 @@ class ListLike(ValidatorsInStandardOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_none_to_empty(cls, none_to_empty: bool) ->  Callable[[Any], list[Any]]:
+    def make_validator_none_to_empty(
+        cls,
+        none_to_empty: bool,
+    ) ->  Callable[[Any], list[Any]]:
 
         def validator(value: Any) -> list[Any]:
             if none_to_empty and value is None:
@@ -105,9 +100,10 @@ class ListLike(ValidatorsInStandardOrder):
     @validate_types_in_func_call
     def make_validator_coerce_scalar(
         cls,
-        coerce_scalar: bool,
-        item_type: Any,
+        args: tuple[bool, Any],
     ) -> Callable[[Any], list[Any]]:
+
+        coerce_scalar, item_type = args
 
         def validator(value: Any) -> list[Any]:
 
@@ -146,18 +142,31 @@ class ListLike(ValidatorsInStandardOrder):
         return validator
 
     @classmethod
-    def iterable_to_list(cls, value: Any) -> list[float]:
-        try:
-            return list(value)
-        except TypeError:
-            err_msg = "Input should be an iterable that can be converted to a list."
-            raise ValueError(err_msg)
+    @validate_types_in_func_call
+    def make_validator_iterable_to_list(
+        cls,
+        iterable_to_list: bool,
+        ) -> Callable[[Any], list[Any]]:
+
+        def validator(value: Any) -> list[Any]:
+            if iterable_to_list:
+                try:
+                    return list(value)
+                except TypeError as err:
+                    err_msg = "Input should be an iterable that can be converted to a list."
+                    raise ValueError(err_msg) from err
+            return value
+
+        return validator
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_length(cls, length: int) -> Callable[[list[float]], list[float]]:
+    def make_validator_length(
+        cls,
+        length: int,
+    ) -> Callable[[list[Any]], list[Any]]:
 
-        def validator(value: list[float]) -> list[float]:
+        def validator(value: list[Any]) -> list[Any]:
             if len(value) != length:
                 err_msg = f"List must have exactly {length} items."
                 raise ValueError(err_msg)
@@ -167,9 +176,12 @@ class ListLike(ValidatorsInStandardOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_unique_items(cls, unique_items: bool) -> Callable[[list[float]], list[float]]:
+    def make_validator_unique_items(
+        cls,
+        unique_items: bool,
+    ) -> Callable[[list[Any]], list[Any]]:
 
-        def validator(value: list[float]) -> list[float]:
+        def validator(value: list[Any]) -> list[Any]:
             if unique_items and len(value) != len(set(value)):
                 err_msg = "List items must be unique."
                 raise ValueError(err_msg)
@@ -179,9 +191,12 @@ class ListLike(ValidatorsInStandardOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_is_sorted(cls, is_sorted: bool) -> Callable[[list[float]], list[float]]:
+    def make_validator_is_sorted(
+        cls,
+        is_sorted: bool,
+    ) -> Callable[[list[Any]], list[Any]]:
 
-        def validator(value: list[float]) -> list[float]:
+        def validator(value: list[Any]) -> list[Any]:
             if is_sorted:
                 if sorted(value) == value:
                     return value
@@ -193,9 +208,12 @@ class ListLike(ValidatorsInStandardOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_is_sorted_reverse(cls, is_sorted_reverse: bool) -> Callable[[list[float]], list[float]]:
+    def make_validator_is_sorted_reverse(
+        cls,
+        is_sorted_reverse: bool,
+    ) -> Callable[[list[Any]], list[Any]]:
 
-        def validator(value: list[float]) -> list[float]:
+        def validator(value: list[Any]) -> list[Any]:
             if is_sorted_reverse:
                 if sorted(value, reverse=True) == value:
                     return value
@@ -207,9 +225,9 @@ class ListLike(ValidatorsInStandardOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_sort(cls, sort: bool) -> Callable[[list[float]], list[float]]:
+    def make_validator_sort(cls, sort: bool) -> Callable[[list[Any]], list[Any]]:
 
-        def validator(value: list[float]) -> list[float]:
+        def validator(value: list[Any]) -> list[Any]:
             if sort:
                 return sorted(value)
             return value
@@ -218,9 +236,12 @@ class ListLike(ValidatorsInStandardOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_sort_reverse(cls, sort_reverse: bool) -> Callable[[list[float]], list[float]]:
+    def make_validator_sort_reverse(
+        cls,
+        sort_reverse: bool,
+    ) -> Callable[[list[Any]], list[Any]]:
 
-        def validator(value: list[float]) -> list[float]:
+        def validator(value: list[Any]) -> list[Any]:
             if sort_reverse:
                 return sorted(value, reverse=True)
             return value
@@ -246,13 +267,13 @@ class ListLike(ValidatorsInStandardOrder):
         sort_reverse: bool | None = None,
     ):
 
-        before_validators = [
-            BeforeValidator(cls.make_validator_none_to_empty(none_to_empty)),
-            BeforeValidator(cls.make_validator_coerce_scalar(coerce_scalar, item_type)),
-            BeforeValidator(cls.iterable_to_list),
-        ][::-1]  # pydantic applies before validators in reversed order of declaration
+        before_validators_args = {
+            "none_to_empty": none_to_empty,
+            "coerce_scalar": (coerce_scalar, item_type),
+            "iterable_to_list": True,
+        }
 
-        field_validators = {
+        field_validators_args = {
             "title": title,
             "description": description,
             "min_length": min_length,
@@ -263,17 +284,15 @@ class ListLike(ValidatorsInStandardOrder):
         after_validators_args = {
             "length": length,
             "unique_items": unique_items,
-            "sorted": sorted,
-            "sorted_reverse": sorted_reverse,
+            "is_sorted": sorted,  # use different key to not shadow the built-in sorted function
+            "is_sorted_reverse": sorted_reverse,
             "sort": sort,
             "sort_reverse": sort_reverse,
         }
 
-        after_validators = cls._get_after_validators(after_validators_args)
-
-        return Annotated[
-            list[item_type],
-            *before_validators,
-            Field(**field_validators),
-            *after_validators,
-        ]
+        return cls._get_annotated(
+            type=list[item_type],
+            before_validators_args=before_validators_args,
+            field_validators_args=field_validators_args,
+            after_validators_args=after_validators_args,
+        )

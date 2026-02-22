@@ -5,21 +5,20 @@ from __future__ import annotations
 __all__ = ["IntLike"]
 
 import numbers
-from typing import Annotated, Any
+from collections.abc import Callable
+from typing import Any
 
-from pydantic import (
-    BeforeValidator,
-    Field,
+from ._common import (
+    BaseLike,
+    validate_types_in_func_call,
 )
 
-from ._common import validate_types_in_func_call
 
-
-class IntLike:
+class IntLike(BaseLike):
     """Create an IntLike type for validating integer values with customizable constraints.
 
-    Rounded non int values, e.g.: 2.0, `Decimal("2.0")`, `np.array(2.0)`, `pd.Series([2.0])`,
-    etc, will be accepted and coerced to int.
+    Rounded non-int values (e.g.: `2.0`, `Decimal("2.0")`, `np.array(2.0)`,
+    `pd.Series([2.0])`, etc), will be coerced to int.
 
     Parameters
     ----------
@@ -58,19 +57,27 @@ class IntLike:
     """
 
     @classmethod
-    def is_number(cls, value: Any) -> numbers.Number:
+    @validate_types_in_func_call
+    def make_validator_is_number(cls, is_number: bool) -> Callable[[Any], Any]:
 
-        # int, float, Decimal, etc
-        if isinstance(value, numbers.Number):
-            return value
+        def validator(value: Any) -> Any:
 
-        # numpy ndarray, pandas Series, xarray DataArray, etc
-        # will raise if size > 1
-        if callable(getattr(value, "item", None)):
-            return value.item()
+            if not is_number:
+                return value
 
-        err_msg = f"Value must be a number, but got '{type(value).__name__}'."
-        raise ValueError(err_msg)
+            # int, float, Decimal, etc
+            if isinstance(value, numbers.Number):
+                return value
+
+            # numpy ndarray, pandas Series, xarray DataArray, etc
+            # will raise if size > 1
+            if callable(getattr(value, "item", None)):
+                return value.item()
+
+            err_msg = f"Value must be a number, but got '{type(value).__name__}'."
+            raise ValueError(err_msg)
+
+        return validator
 
     @validate_types_in_func_call
     def __new__(
@@ -85,11 +92,11 @@ class IntLike:
         multiple_of: float | None = None,
     ):
 
-        before_validators = [
-            BeforeValidator(cls.is_number),
-        ][::-1]  # pydantic applies before validators in reversed order of declaration
+        before_validators_args = {
+            "is_number": True,
+        }
 
-        field_validators = {
+        field_validators_args = {
             "title": title,
             "description": description,
             "strict": False,  # allow all but restrict it with is_number_validator
@@ -100,8 +107,8 @@ class IntLike:
             "multiple_of": multiple_of,
         }
 
-        return Annotated[
-            int,
-            *before_validators,
-            Field(**field_validators),
-        ]
+        return cls._get_annotated(
+            type=int,
+            before_validators_args=before_validators_args,
+            field_validators_args=field_validators_args,
+        )

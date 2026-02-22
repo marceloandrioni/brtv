@@ -3,8 +3,8 @@
 from __future__ import annotations
 
 __all__ = [
-    "ValidatorsInStandardOrder",
-    "ValidatorsInUserOrder",
+    "BaseLike",
+    "BaseLikeInUserOrder",
     "set_type_annotations_and_validation",
     "set_validate_types_in_func_call",
     "validate_type",
@@ -18,13 +18,16 @@ from collections.abc import (
 )
 from functools import wraps
 from typing import (
+    Annotated,
     Any,
 )
 
 from multidict import MultiDict
 from pydantic import (
     AfterValidator,
+    BeforeValidator,
     ConfigDict,
+    Field,
     TypeAdapter,
     validate_call,
 )
@@ -158,20 +161,75 @@ def validate_type(
     return TypeAdapter(type, config=CONFIG).validate_python(value, strict=strict)
 
 
-class ValidatorsInStandardOrder:
-    """Abstract base class for type validation with standard defined validator order."""
+class BaseLike:
 
     @classmethod
-    def _get_after_validators(cls, validators_args: dict[str, Any]) -> list[Callable]:
+    def _get_validator(cls, key: str, value: Any) -> Callable:
+        try:
+            func = getattr(cls, f"make_validator_{key}")
+        except AttributeError as err:
+            err_msg = f"{cls.__name__}() got an unexpected keyword argument '{key}'."
+            raise TypeError(err_msg) from err
+        validator = func(value)
+        return validator
 
-        after_validators = []
+    @classmethod
+    def _get_validators(
+        cls,
+        validators_args: dict[str, Any] | MultiDict,
+    ) -> list[Callable]:
+        validators = []
         for key, value in validators_args.items():
-            if value is not None:
-                after_validators.append(
-                    AfterValidator(getattr(cls, f"make_validator_{key}")(value))
-                )
+            if value is None:
+                continue
+            validators.append(cls._get_validator(key, value))
+        return validators
 
-        return after_validators
+    @classmethod
+    def _get_before_validators(
+        cls,
+        validators_args: dict[str, Any] | MultiDict,
+    ) -> list[Callable]:
+        return [
+            BeforeValidator(validator)
+            for validator in cls._get_validators(validators_args)
+        ][::-1] # pydantic applies BeforeValidators in reversed order of declaration
+
+    @classmethod
+    def _get_after_validators(
+        cls,
+        validators_args: dict[str, Any] | MultiDict,
+    ) -> list[Callable]:
+        return [
+            AfterValidator(validator)
+            for validator in cls._get_validators(validators_args)
+        ]
+
+    @classmethod
+    def _get_annotated(
+        cls,
+        *,
+        type: Any,
+        before_validators_args: dict[str, Any] | MultiDict | None = None,
+        field_validators_args: dict[str, Any] | MultiDict | None = None,
+        after_validators_args: dict[str, Any] | MultiDict | None = None,
+    ):
+
+        args = [type]
+
+        # Annotated must be instantiated at least with Annotated[type, Field()]
+        if field_validators_args is not None:
+            args += [Field(**field_validators_args)]
+        else:
+            args += [Field()]
+
+        if before_validators_args is not None:
+            args += cls._get_before_validators(before_validators_args)
+
+        if after_validators_args is not None:
+            args += cls._get_after_validators(after_validators_args)
+
+        return Annotated[*args]
 
 
 def _call_real_new(func: Callable) -> Callable:
@@ -258,7 +316,7 @@ def _call_real_new(func: Callable) -> Callable:
     return wrapper
 
 
-class ValidatorsInUserOrder(ABC):
+class BaseLikeInUserOrder(BaseLike, ABC):
     """Abstract base class for type validation with user-defined validator order.
 
     The `__new__` method should only define the function signature and must be
@@ -274,30 +332,3 @@ class ValidatorsInUserOrder(ABC):
     @abstractmethod
     def _real_new(cls, config: MultiDict):
         pass
-
-    @classmethod
-    @abstractmethod
-    def _get_after_validators_keys(cls) -> list[str]:
-        pass
-
-    @classmethod
-    def _get_after_validators(
-        cls,
-        config: MultiDict,
-    ) -> list[Callable]:
-
-        after_validators_all = {
-            k: getattr(cls, f"make_validator_{k}")
-            for k in cls._get_after_validators_keys()
-        }
-
-        after_validators = []
-        for key, value in config.items():
-            try:
-                func = AfterValidator(after_validators_all[key](value))
-                after_validators.append(func)
-            except KeyError as err:
-                err_msg = f"{cls.__name__}() got got an unexpected keyword argument '{key}'."
-                raise TypeError(err_msg) from err
-
-        return after_validators

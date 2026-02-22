@@ -9,21 +9,16 @@ from collections.abc import Callable
 from decimal import Decimal
 from typing import Annotated
 
-from pydantic import (
-    AfterValidator,
-    BeforeValidator,
-    Field,
-)
+from pydantic import Field
 
 from ._common import (
-    ValidatorsInStandardOrder,
     validate_type,
     validate_types_in_func_call,
 )
 from ._intlike import IntLike
 
 
-class FloatLike(ValidatorsInStandardOrder):
+class FloatLike(IntLike):
     """Create a FloatLike type for validating float values with customizable constraints.
 
     Validators are applied in this order below, regardless of the order in which
@@ -73,7 +68,10 @@ class FloatLike(ValidatorsInStandardOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_allow_nan(cls, allow_nan: bool) -> Callable[[float], float]:
+    def make_validator_allow_nan(
+        cls,
+        allow_nan: bool,
+    ) -> Callable[[float], float]:
 
         def validator(value: float) -> float:
             if math.isnan(value) and not allow_nan:
@@ -84,7 +82,10 @@ class FloatLike(ValidatorsInStandardOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_allow_inf(cls, allow_inf: bool) -> Callable[[float], float]:
+    def make_validator_allow_inf(
+        cls,
+        allow_inf: bool,
+    ) -> Callable[[float], float]:
 
         def validator(value: float) -> float:
             if math.isinf(value) and not allow_inf:
@@ -95,7 +96,10 @@ class FloatLike(ValidatorsInStandardOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_max_decimal_places(cls, max_decimal_places: int) -> Callable[[float], float]:
+    def make_validator_max_decimal_places(
+        cls,
+        max_decimal_places: int,
+    ) -> Callable[[float], float]:
 
         def validator(value: float) -> float:
 
@@ -129,11 +133,11 @@ class FloatLike(ValidatorsInStandardOrder):
         max_decimal_places: int | None = None,
     ):
 
-        before_validators = [
-            BeforeValidator(IntLike.is_number),
-        ][::-1]  # pydantic applies before validators in reversed order of declaration
+        before_validators_args = {
+            "is_number": True,
+        }
 
-        field_validators = {
+        field_validators_args = {
             "title": title,
             "description": description,
             "strict": False,  # allow all but restrict it with is_number_validator
@@ -150,11 +154,9 @@ class FloatLike(ValidatorsInStandardOrder):
             "max_decimal_places": max_decimal_places,
         }
 
-        after_validators = cls._get_after_validators(after_validators_args)
-
-        return Annotated[
-            float,
-            *before_validators,
-            Field(**field_validators),
-            *after_validators,
-        ]
+        return cls._get_annotated(
+            type=float,
+            before_validators_args=before_validators_args,
+            field_validators_args=field_validators_args,
+            after_validators_args=after_validators_args,
+        )

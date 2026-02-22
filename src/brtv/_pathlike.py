@@ -10,19 +10,19 @@ import re
 import string
 from collections.abc import Callable, Iterable
 from pathlib import Path
-from typing import Annotated, Any
+from re import Pattern
+from typing import Any
 
 from multidict import MultiDict
-from pydantic import Field
 
 from ._common import (
-    ValidatorsInUserOrder,
+    BaseLikeInUserOrder,
     _call_real_new,
     validate_types_in_func_call,
 )
 
 
-class PathLike(ValidatorsInUserOrder):
+class PathLike(BaseLikeInUserOrder):
     """Create a PathLike type for validating file system paths with customizable constraints.
 
     Validators are applied in the user requested order.
@@ -64,9 +64,9 @@ class PathLike(ValidatorsInUserOrder):
         Path must end with this string. Useful to check file extensions.
         Multiple suffixes can be provided separated by semicolons,
         e.g.: '.png;.gif;.jpeg'
-    path_pattern : str, optional
+    path_pattern : str, Pattern[str], optional
         Regular expression pattern that the full path must match.
-    name_pattern : str, optional
+    name_pattern : str, Pattern[str], optional
         Regular expression pattern that the path name (final component) must match.
     with_suffix : str, optional
         Path with the file suffix changed. If the path has no suffix, add given
@@ -155,7 +155,10 @@ class PathLike(ValidatorsInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_exist_as_file(cls, exist_as_file: bool) -> Callable[[Path], Path]:
+    def make_validator_exist_as_file(
+        cls,
+        exist_as_file: bool,
+    ) -> Callable[[Path], Path]:
 
         def validator(path: Path) -> Path:
             if exist_as_file and not path.is_file():
@@ -167,7 +170,10 @@ class PathLike(ValidatorsInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_exist_as_dir(cls, exist_as_dir: bool) -> Callable[[Path], Path]:
+    def make_validator_exist_as_dir(
+        cls,
+        exist_as_dir: bool,
+    ) -> Callable[[Path], Path]:
 
         def validator(path: Path) -> Path:
             if exist_as_dir and not path.is_dir():
@@ -231,7 +237,10 @@ class PathLike(ValidatorsInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_create_as_dir(cls, create_as_dir: bool) -> Callable[[Path], Path]:
+    def make_validator_create_as_dir(
+        cls,
+        create_as_dir: bool,
+    ) -> Callable[[Path], Path]:
 
         def validator(path: Path) -> Path:
             if create_as_dir and not path.is_dir():
@@ -242,7 +251,10 @@ class PathLike(ValidatorsInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_create_as_file(cls, create_as_file: bool) -> Callable[[Path], Path]:
+    def make_validator_create_as_file(
+        cls,
+        create_as_file: bool,
+    ) -> Callable[[Path], Path]:
 
         def validator(path: Path) -> Path:
             if create_as_file and not path.is_file():
@@ -255,7 +267,10 @@ class PathLike(ValidatorsInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_create_parents(cls, create_parents: bool) -> Callable[[Path], Path]:
+    def make_validator_create_parents(
+        cls,
+        create_parents: bool,
+    ) -> Callable[[Path], Path]:
 
         def validator(path: Path) -> Path:
             if create_parents:
@@ -306,7 +321,10 @@ class PathLike(ValidatorsInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_path_pattern(cls, path_pattern: str) -> Callable[[Path], Path]:
+    def make_validator_path_pattern(
+        cls,
+        path_pattern: str | Pattern[str],
+    ) -> Callable[[Path], Path]:
 
         def validator(path: Path) -> Path:
             if not re.search(path_pattern, str(path)):
@@ -318,7 +336,10 @@ class PathLike(ValidatorsInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_name_pattern(cls, name_pattern: str) -> Callable[[Path], Path]:
+    def make_validator_name_pattern(
+        cls,
+        name_pattern: str | Pattern[str],
+    ) -> Callable[[Path], Path]:
 
         def validator(path: Path) -> Path:
             if not re.search(name_pattern, path.name):
@@ -339,7 +360,10 @@ class PathLike(ValidatorsInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_with_random_part(cls, with_random_part: bool) -> Callable[[Path], Path]:
+    def make_validator_with_random_part(
+        cls,
+        with_random_part: bool,
+    ) -> Callable[[Path], Path]:
 
         sample_space = string.ascii_lowercase + string.ascii_uppercase + string.digits
         random_str = "".join(random.choices(sample_space, k=8))
@@ -369,8 +393,8 @@ class PathLike(ValidatorsInUserOrder):
         absolute: bool | None = None,
         resolve: bool | None = None,
         endswith: str | None = None,
-        path_pattern: str | None = None,
-        name_pattern: str | None = None,
+        path_pattern: str | Pattern[str] | None = None,
+        name_pattern: str | Pattern[str] | None = None,
         with_suffix: str | None = None,
         with_random_part: bool | None = None,
         config: Iterable[tuple[str, Any]] | None = None,
@@ -378,42 +402,16 @@ class PathLike(ValidatorsInUserOrder):
         pass
 
     @classmethod
-    def _get_after_validators_keys(cls) -> list[str]:
-        return [
-            "exist",
-            "exist_as_file",
-            "exist_as_dir",
-            "not_exist",
-            "readable",
-            "writable",
-            "create_as_dir",
-            "create_as_file",
-            "create_parents",
-            "absolute",
-            "resolve",
-            "endswith",
-            "path_pattern",
-            "name_pattern",
-            "with_suffix",
-            "with_random_part",
-        ]
-
-    @classmethod
     def _real_new(cls, config: MultiDict):
 
-        title = config.pop("title", None)
-        description = config.pop("description", None)
-
-        field_validators = {
-            "title": title,
-            "description": description,
+        field_validators_args = {
+            "title": config.pop("title", None),
+            "description": config.pop("description", None),
             "strict": False,  # allow coercion from str to Path
         }
 
-        after_validators = cls._get_after_validators(config)
-
-        return Annotated[
-            Path,
-            Field(**field_validators),
-            *after_validators,
-        ]
+        return cls._get_annotated(
+            type=Path,
+            field_validators_args=field_validators_args,
+            after_validators_args=config,
+        )
