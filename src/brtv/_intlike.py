@@ -23,9 +23,11 @@ class IntLike(BaseLike):
     Parameters
     ----------
     title : str, optional
-        Human-readable title.
+        Human-readable title. Useful for documentation and debugging.
     description : str, optional
-        Human-readable description.
+        Human-readable description. Useful for documentation and debugging.
+    examples : list[Any], optional
+        Examples of valid values. Useful for documentation and debugging.
     gt : float, optional
         Greater than. If set, value must be greater than this.
     ge : float, optional
@@ -85,6 +87,7 @@ class IntLike(BaseLike):
         *,
         title: str | None = None,
         description: str | None = None,
+        examples: list[Any] | None = None,
         gt: float | None = None,
         ge: float | None = None,
         lt: float | None = None,
@@ -99,6 +102,7 @@ class IntLike(BaseLike):
         field_validators_args = {
             "title": title,
             "description": description,
+            "examples": examples,
             "strict": False,  # allow all but restrict it with is_number_validator
             "gt": gt,
             "ge": ge,

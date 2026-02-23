@@ -7,7 +7,10 @@ __all__ = ["FloatLike"]
 import math
 from collections.abc import Callable
 from decimal import Decimal
-from typing import Annotated
+from typing import (
+    Annotated,
+    Any,
+)
 
 from pydantic import Field
 
@@ -27,9 +30,11 @@ class FloatLike(IntLike):
     Parameters
     ----------
     title : str, optional
-        Human-readable title.
+        Human-readable title. Useful for documentation and debugging.
     description : str, optional
-        Human-readable description.
+        Human-readable description. Useful for documentation and debugging.
+    examples : list[Any], optional
+        Examples of valid values. Useful for documentation and debugging.
     gt : float, optional
         Greater than. If set, value must be greater than this.
     ge : float, optional
@@ -123,6 +128,7 @@ class FloatLike(IntLike):
         *,
         title: str | None = None,
         description: str | None = None,
+        examples: list[Any] | None = None,
         gt: float | None = None,
         ge: float | None = None,
         lt: float | None = None,
@@ -140,6 +146,7 @@ class FloatLike(IntLike):
         field_validators_args = {
             "title": title,
             "description": description,
+            "examples": examples,
             "strict": False,  # allow all but restrict it with is_number_validator
             "gt": gt,
             "ge": ge,

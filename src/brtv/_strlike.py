@@ -15,6 +15,7 @@ from multidict import MultiDict
 from ._common import (
     BaseLikeInUserOrder,
     _call_real_new,
+    popall_get_last,
     validate_types_in_func_call,
 )
 
@@ -27,9 +28,11 @@ class StrLike(BaseLikeInUserOrder):
     Parameters
     ----------
     title : str, optional
-        Human-readable title.
+        Human-readable title. Useful for documentation and debugging.
     description : str, optional
-        Human-readable description.
+        Human-readable description. Useful for documentation and debugging.
+    examples : list[Any], optional
+        Examples of valid values. Useful for documentation and debugging.
     none_to_empty : bool, optional
         Coerce None to empty string.
     strip : bool, optional
@@ -241,6 +244,7 @@ class StrLike(BaseLikeInUserOrder):
         *,
         title: str | None = None,
         description: str | None = None,
+        examples: list[Any] | None = None,
         none_to_empty: bool | None = False,
         strip: bool | None = None,
         to_upper: bool | None = None,
@@ -264,12 +268,13 @@ class StrLike(BaseLikeInUserOrder):
         # order of application, we need to reimplement them here.
 
         before_validators_args = {
-            "none_to_empty": config.pop("none_to_empty", False),
+            "none_to_empty": popall_get_last(config, "none_to_empty", False),
         }
 
         field_validators_args = {
-            "title": config.pop("title", None),
-            "description": config.pop("description", None),
+            "title": popall_get_last(config, "title"),
+            "description": popall_get_last(config, "description"),
+            "examples": popall_get_last(config, "examples"),
             "strict": False,  # allow bytes, StrEnum
         }
 

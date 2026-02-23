@@ -29,9 +29,11 @@ class ListLike(BaseLike):
         float, str, another list, etc) or a custom type with its own validation
         (e.g., `FloatLike(gt=0)`).
     title : str, optional
-        Human-readable title.
+        Human-readable title. Useful for documentation and debugging.
     description : str, optional
-        Human-readable description.
+        Human-readable description. Useful for documentation and debugging.
+    examples : list[Any], optional
+        Examples of valid values. Useful for documentation and debugging.
     none_to_empty : bool, optional
         Coerce None to empty list.
     coerce_scalar : bool, optional
@@ -255,6 +257,7 @@ class ListLike(BaseLike):
         *,
         title: str | None = None,
         description: str | None = None,
+        examples: list[Any] | None = None,
         none_to_empty: bool = False,
         coerce_scalar: bool = False,
         min_length: int | None = None,
@@ -276,6 +279,7 @@ class ListLike(BaseLike):
         field_validators_args = {
             "title": title,
             "description": description,
+            "examples": examples,
             "min_length": min_length,
             "max_length": max_length,
             "fail_fast": True,  # stop at the first error in the list

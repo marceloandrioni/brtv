@@ -18,6 +18,7 @@ from multidict import MultiDict
 from ._common import (
     BaseLikeInUserOrder,
     _call_real_new,
+    popall_get_last,
     validate_types_in_func_call,
 )
 
@@ -30,9 +31,11 @@ class PathLike(BaseLikeInUserOrder):
     Parameters
     ----------
     title : str, optional
-        Human-readable title.
+        Human-readable title. Useful for documentation and debugging.
     description : str, optional
-        Human-readable description.
+        Human-readable description. Useful for documentation and debugging.
+    examples : list[Any], optional
+        Examples of valid values. Useful for documentation and debugging.
     exist : bool, optional
         Path must exist.
     exist_as_file : bool, optional
@@ -381,6 +384,7 @@ class PathLike(BaseLikeInUserOrder):
         *,
         title: str | None = None,
         description: str | None = None,
+        examples: list[Any] | None = None,
         exist: bool | None = None,
         exist_as_file: bool | None = None,
         exist_as_dir: bool | None = None,
@@ -405,8 +409,9 @@ class PathLike(BaseLikeInUserOrder):
     def _real_new(cls, config: MultiDict):
 
         field_validators_args = {
-            "title": config.pop("title", None),
-            "description": config.pop("description", None),
+            "title": popall_get_last(config, "title"),
+            "description": popall_get_last(config, "description"),
+            "examples": popall_get_last(config, "examples"),
             "strict": False,  # allow coercion from str to Path
         }
 
