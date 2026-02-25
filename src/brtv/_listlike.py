@@ -9,8 +9,8 @@ from typing import Any
 
 from pydantic import ValidationError
 
+from ._baselike import BaseLike
 from ._common import (
-    BaseLike,
     validate_type,
     validate_types_in_func_call,
 )

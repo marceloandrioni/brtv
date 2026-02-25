@@ -15,11 +15,9 @@ from typing import Any
 
 from multidict import MultiDict
 
+from ._baselike import BaseLikeInUserOrder
 from ._common import (
-    BaseLikeInUserOrder,
-    _call_real_new,
-    popall_get_last,
-    validate_types_in_func_call,
+     validate_types_in_func_call,
 )
 
 
@@ -378,7 +376,7 @@ class PathLike(BaseLikeInUserOrder):
 
         return validator
 
-    @_call_real_new
+    @BaseLikeInUserOrder._call_real_new
     def __new__(
         cls,
         *,
@@ -409,9 +407,9 @@ class PathLike(BaseLikeInUserOrder):
     def _real_new(cls, config: MultiDict):
 
         field_validators_args = {
-            "title": popall_get_last(config, "title"),
-            "description": popall_get_last(config, "description"),
-            "examples": popall_get_last(config, "examples"),
+            "title": cls._popall_get_last(config, "title"),
+            "description": cls._popall_get_last(config, "description"),
+            "examples": cls._popall_get_last(config, "examples"),
             "strict": False,  # allow coercion from str to Path
         }
 

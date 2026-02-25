@@ -8,10 +8,9 @@ import numbers
 from collections.abc import Callable
 from typing import Any
 
-from ._common import (
-    BaseLike,
-    validate_types_in_func_call,
-)
+from ._baselike import BaseLike
+from ._common import validate_types_in_func_call
+
 
 
 class IntLike(BaseLike):

@@ -12,12 +12,8 @@ from typing import Any
 
 from multidict import MultiDict
 
-from ._common import (
-    BaseLikeInUserOrder,
-    _call_real_new,
-    popall_get_last,
-    validate_types_in_func_call,
-)
+from ._baselike import BaseLikeInUserOrder
+from ._common import validate_types_in_func_call
 
 
 class StrLike(BaseLikeInUserOrder):
@@ -238,7 +234,7 @@ class StrLike(BaseLikeInUserOrder):
 
         return validator
 
-    @_call_real_new
+    @BaseLikeInUserOrder._call_real_new
     def __new__(
         cls,
         *,
@@ -268,13 +264,13 @@ class StrLike(BaseLikeInUserOrder):
         # order of application, we need to reimplement them here.
 
         before_validators_args = {
-            "none_to_empty": popall_get_last(config, "none_to_empty", False),
+            "none_to_empty": cls._popall_get_last(config, "none_to_empty", False),
         }
 
         field_validators_args = {
-            "title": popall_get_last(config, "title"),
-            "description": popall_get_last(config, "description"),
-            "examples": popall_get_last(config, "examples"),
+            "title": cls._popall_get_last(config, "title"),
+            "description": cls._popall_get_last(config, "description"),
+            "examples": cls._popall_get_last(config, "examples"),
             "strict": False,  # allow bytes, StrEnum
         }
 
