@@ -8,7 +8,7 @@ import os
 import random
 import re
 import string
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from pathlib import Path
 from re import Pattern
 from typing import Any
@@ -17,6 +17,7 @@ from multidict import MultiDict
 
 from ._baselike import BaseLikeInUserOrder
 from ._common import (
+    FuncPathPath,
      validate_types_in_func_call,
 )
 
@@ -64,7 +65,7 @@ class PathLike(BaseLikeInUserOrder):
     endswith : str, optional
         Path must end with this string. Useful to check file extensions.
         Multiple suffixes can be provided separated by semicolons,
-        e.g.: '.png;.gif;.jpeg'
+        e.g.: `'.png;.gif;.jpeg'`
     path_pattern : str, Pattern[str], optional
         Regular expression pattern that the full path must match.
     name_pattern : str, Pattern[str], optional
@@ -144,7 +145,7 @@ class PathLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_exist(cls, exist: bool) -> Callable[[Path], Path]:
+    def make_validator_exist(cls, exist: bool) -> FuncPathPath:
 
         def validator(path: Path) -> Path:
             if exist and not path.exists():
@@ -156,10 +157,7 @@ class PathLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_exist_as_file(
-        cls,
-        exist_as_file: bool,
-    ) -> Callable[[Path], Path]:
+    def make_validator_exist_as_file(cls, exist_as_file: bool) -> FuncPathPath:
 
         def validator(path: Path) -> Path:
             if exist_as_file and not path.is_file():
@@ -171,10 +169,7 @@ class PathLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_exist_as_dir(
-        cls,
-        exist_as_dir: bool,
-    ) -> Callable[[Path], Path]:
+    def make_validator_exist_as_dir(cls, exist_as_dir: bool) -> FuncPathPath:
 
         def validator(path: Path) -> Path:
             if exist_as_dir and not path.is_dir():
@@ -186,7 +181,7 @@ class PathLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_not_exist(cls, not_exist: bool) -> Callable[[Path], Path]:
+    def make_validator_not_exist(cls, not_exist: bool) -> FuncPathPath:
 
         def validator(path: Path) -> Path:
             if not_exist and path.exists():
@@ -198,7 +193,7 @@ class PathLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_readable(cls, readable: bool) -> Callable[[Path], Path]:
+    def make_validator_readable(cls, readable: bool) -> FuncPathPath:
 
         def validator(path: Path) -> Path:
             if readable and not os.access(path, os.R_OK):
@@ -210,7 +205,7 @@ class PathLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_writable(cls, writable: bool) -> Callable[[Path], Path]:
+    def make_validator_writable(cls, writable: bool) -> FuncPathPath:
 
         def validator(path: Path) -> Path:
 
@@ -238,10 +233,7 @@ class PathLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_create_as_dir(
-        cls,
-        create_as_dir: bool,
-    ) -> Callable[[Path], Path]:
+    def make_validator_create_as_dir(cls, create_as_dir: bool) -> FuncPathPath:
 
         def validator(path: Path) -> Path:
             if create_as_dir and not path.is_dir():
@@ -252,10 +244,7 @@ class PathLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_create_as_file(
-        cls,
-        create_as_file: bool,
-    ) -> Callable[[Path], Path]:
+    def make_validator_create_as_file(cls, create_as_file: bool) -> FuncPathPath:
 
         def validator(path: Path) -> Path:
             if create_as_file and not path.is_file():
@@ -268,10 +257,7 @@ class PathLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_create_parents(
-        cls,
-        create_parents: bool,
-    ) -> Callable[[Path], Path]:
+    def make_validator_create_parents(cls, create_parents: bool) -> FuncPathPath:
 
         def validator(path: Path) -> Path:
             if create_parents:
@@ -282,7 +268,7 @@ class PathLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_absolute(cls, absolute: bool) -> Callable[[Path], Path]:
+    def make_validator_absolute(cls, absolute: bool) -> FuncPathPath:
 
         def validator(path: Path) -> Path:
             if absolute:
@@ -293,7 +279,7 @@ class PathLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_resolve(cls, resolve: bool) -> Callable[[Path], Path]:
+    def make_validator_resolve(cls, resolve: bool) -> FuncPathPath:
 
         def validator(path: Path) -> Path:
             if resolve:
@@ -304,7 +290,7 @@ class PathLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_endswith(cls, endswith: str) -> Callable[[Path], Path]:
+    def make_validator_endswith(cls, endswith: str) -> FuncPathPath:
 
         def validator(path: Path) -> Path:
 
@@ -325,7 +311,7 @@ class PathLike(BaseLikeInUserOrder):
     def make_validator_path_pattern(
         cls,
         path_pattern: str | Pattern[str],
-    ) -> Callable[[Path], Path]:
+    ) -> FuncPathPath:
 
         def validator(path: Path) -> Path:
             if not re.search(path_pattern, str(path)):
@@ -340,7 +326,7 @@ class PathLike(BaseLikeInUserOrder):
     def make_validator_name_pattern(
         cls,
         name_pattern: str | Pattern[str],
-    ) -> Callable[[Path], Path]:
+    ) -> FuncPathPath:
 
         def validator(path: Path) -> Path:
             if not re.search(name_pattern, path.name):
@@ -352,7 +338,7 @@ class PathLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_with_suffix(cls, suffix: str) -> Callable[[Path], Path]:
+    def make_validator_with_suffix(cls, suffix: str) -> FuncPathPath:
 
         def validator(path: Path) -> Path:
             return path.with_suffix(suffix)
@@ -361,10 +347,7 @@ class PathLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_with_random_part(
-        cls,
-        with_random_part: bool,
-    ) -> Callable[[Path], Path]:
+    def make_validator_with_random_part(cls, with_random_part: bool) -> FuncPathPath:
 
         sample_space = string.ascii_lowercase + string.ascii_uppercase + string.digits
         random_str = "".join(random.choices(sample_space, k=8))

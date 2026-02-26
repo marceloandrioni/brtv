@@ -26,6 +26,7 @@ from ._common import validate_types_in_func_call
 
 
 class BaseLike:
+    """Base class for type validation."""
 
     @classmethod
     def _get_validator(cls, key: str, value: Any) -> Callable:
@@ -53,17 +54,17 @@ class BaseLike:
     def _get_before_validators(
         cls,
         validators_args: dict[str, Any] | MultiDict,
-    ) -> list[Callable]:
+    ) -> list[BeforeValidator]:
         return [
             BeforeValidator(validator)
             for validator in cls._get_validators(validators_args)
-        ][::-1] # pydantic applies BeforeValidators in reversed order of declaration
+        ][::-1]  # pydantic applies BeforeValidators in reversed order of declaration
 
     @classmethod
     def _get_after_validators(
         cls,
         validators_args: dict[str, Any] | MultiDict,
-    ) -> list[Callable]:
+    ) -> list[AfterValidator]:
         return [
             AfterValidator(validator)
             for validator in cls._get_validators(validators_args)
@@ -96,96 +97,13 @@ class BaseLike:
         return Annotated[*args]
 
 
-def _call_real_new(func: Callable) -> Callable:
-    """Decorate the `__new__` method so that the `_real_new` is actually called.
-
-    Useful to preserve the method signature of `__new__` while allowing
-    custom object creation logic in `_real_new`, including keeping the
-    user requested order of keyword arguments.
-
-    Returns
-    -------
-    Callable
-        Wrapped class __new__ method.
-
-    Examples
-    --------
-    >>> class Foo:
-    ...
-    ...     @_call_real_new
-    ...     def __new__(cls, *, x: float, y: float):
-    ...         pass
-    ...
-    ...     @classmethod
-    ...     def _real_new(cls, config: MultiDict) -> dict[str, float]:
-    ...         return {k: v * 2 for k, v in config.items()}
-
-    >>> Foo(x=1, y=2)
-    {'x': 2, 'y': 4}
-
-    >>> Foo(y=2, x=1)
-    {'y': 4, 'x': 2}
-
-    """
-
-    # Note: The goal is to use __new__ to provide a clear method signature, while
-    # the actual implementation is handled by _real_new, which uses a dict to
-    # preserve the user requested order of validators.
-    # This is necessary because python binds the args/kwargs in the signature
-    # order (as can be seen with inspect.signature) before executing the function,
-    # losing the original order provided by the user.
-
-    # Note: It may be necessary to apply the "same" validator multiple times, but the
-    # usual syntax
-    #
-    # PathLike(
-    #   endswith=".csv",
-    #   create_as_file=True,  # create empty csv file
-    #   with_suffix=".log",
-    #   create_as_file=True,  # create empty log file
-    # )
-    #
-    # would fail with "SyntaxError: keyword argument repeated: create_as_file".
-    # One way of solving this is to accept a list of (key, value) pairs in
-    # the 'config' kwarg and convert it to a multidict.MultiDict, that is
-    # basically a dict that allows repeated keys, e.g.:
-    #
-    # PathLike(
-    #     config=[
-    #         ("endswith", ".csv"),
-    #         ("create_as_file", True),
-    #         ("with_suffix", ".log"),
-    #         ("create_as_file", True),
-    #     ]
-    # )
-
-    @wraps(func)
-    def wrapper(*args, **kwargs):
-
-        if len(args) > 1:
-            err_msg = "Only keyword arguments are allowed."
-            raise TypeError(err_msg)
-        cls = args[0]
-
-        if "config" in kwargs:
-            if set(kwargs) != {"config"}:
-                err_msg = "If 'config' is used, no other kwarg is allowed."
-                raise TypeError(err_msg)
-            config = MultiDict(kwargs["config"])
-        else:
-            config = MultiDict(kwargs)
-
-        return cls._real_new(config)
-
-    return wrapper
-
-
 class BaseLikeInUserOrder(BaseLike, ABC):
     """Abstract base class for type validation with user-defined validator order.
 
     The `__new__` method should only define the function signature and must be
-    decorated with `@_call_real_new`. The actual creation of the `Annotated` type
-    and application of validators should be implemented in the `_real_new` method.
+    decorated with `@BaseLikeInUserOrder._call_real_new`. The actual creation of
+    the `Annotated` type and application of validators should be implemented in
+    the `_real_new` method.
 
     This approach preserves the order of validators as specified by the user,
     since Python's argument binding loses the original keyword argument order.

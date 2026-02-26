@@ -4,13 +4,14 @@ from __future__ import annotations
 
 __all__ = ["ListLike"]
 
-from collections.abc import Callable
 from typing import Any
 
 from pydantic import ValidationError
 
 from ._baselike import BaseLike
 from ._common import (
+    FuncAnyAny,
+    FuncListList,
     validate_type,
     validate_types_in_func_call,
 )
@@ -86,12 +87,9 @@ class ListLike(BaseLike):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_none_to_empty(
-        cls,
-        none_to_empty: bool,
-    ) ->  Callable[[Any], list[Any]]:
+    def make_validator_none_to_empty(cls, none_to_empty: bool) ->  FuncAnyAny:
 
-        def validator(value: Any) -> list[Any]:
+        def validator(value: Any) -> Any:
             if none_to_empty and value is None:
                 return []
             return value
@@ -100,15 +98,11 @@ class ListLike(BaseLike):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_coerce_scalar(
-        cls,
-        args: tuple[bool, Any],
-    ) -> Callable[[Any], list[Any]]:
+    def make_validator_coerce_scalar(cls, args: tuple[bool, Any]) -> FuncAnyAny:
 
         coerce_scalar, item_type = args
 
-        def validator(value: Any) -> list[Any]:
-
+        def validator(value: Any) -> Any:
             # Note: can't just check if is iterable because str, list[str],
             # list[list[floats]], etc, are all valid situations. The only way is
             # to actually try validating both as scalar and list.
@@ -148,9 +142,9 @@ class ListLike(BaseLike):
     def make_validator_iterable_to_list(
         cls,
         iterable_to_list: bool,
-        ) -> Callable[[Any], list[Any]]:
+        ) -> FuncAnyAny:
 
-        def validator(value: Any) -> list[Any]:
+        def validator(value: Any) -> Any:
             if iterable_to_list:
                 try:
                     return list(value)
@@ -163,10 +157,7 @@ class ListLike(BaseLike):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_length(
-        cls,
-        length: int,
-    ) -> Callable[[list[Any]], list[Any]]:
+    def make_validator_length(cls, length: int) -> FuncListList:
 
         def validator(value: list[Any]) -> list[Any]:
             if len(value) != length:
@@ -178,10 +169,7 @@ class ListLike(BaseLike):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_unique_items(
-        cls,
-        unique_items: bool,
-    ) -> Callable[[list[Any]], list[Any]]:
+    def make_validator_unique_items(cls, unique_items: bool) -> FuncListList:
 
         def validator(value: list[Any]) -> list[Any]:
             if unique_items and len(value) != len(set(value)):
@@ -193,10 +181,7 @@ class ListLike(BaseLike):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_is_sorted(
-        cls,
-        is_sorted: bool,
-    ) -> Callable[[list[Any]], list[Any]]:
+    def make_validator_is_sorted(cls, is_sorted: bool) -> FuncListList:
 
         def validator(value: list[Any]) -> list[Any]:
             if is_sorted:
@@ -213,7 +198,7 @@ class ListLike(BaseLike):
     def make_validator_is_sorted_reverse(
         cls,
         is_sorted_reverse: bool,
-    ) -> Callable[[list[Any]], list[Any]]:
+    ) -> FuncListList:
 
         def validator(value: list[Any]) -> list[Any]:
             if is_sorted_reverse:
@@ -227,7 +212,7 @@ class ListLike(BaseLike):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_sort(cls, sort: bool) -> Callable[[list[Any]], list[Any]]:
+    def make_validator_sort(cls, sort: bool) -> FuncListList:
 
         def validator(value: list[Any]) -> list[Any]:
             if sort:
@@ -238,10 +223,7 @@ class ListLike(BaseLike):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_sort_reverse(
-        cls,
-        sort_reverse: bool,
-    ) -> Callable[[list[Any]], list[Any]]:
+    def make_validator_sort_reverse(cls, sort_reverse: bool) -> FuncListList:
 
         def validator(value: list[Any]) -> list[Any]:
             if sort_reverse:

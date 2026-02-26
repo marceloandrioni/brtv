@@ -5,7 +5,6 @@ from __future__ import annotations
 __all__ = ["FloatLike"]
 
 import math
-from collections.abc import Callable
 from decimal import Decimal
 from typing import (
     Annotated,
@@ -15,6 +14,7 @@ from typing import (
 from pydantic import Field
 
 from ._common import (
+    FuncFloatFloat,
     validate_type,
     validate_types_in_func_call,
 )
@@ -73,10 +73,7 @@ class FloatLike(IntLike):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_allow_nan(
-        cls,
-        allow_nan: bool,
-    ) -> Callable[[float], float]:
+    def make_validator_allow_nan(cls, allow_nan: bool) -> FuncFloatFloat:
 
         def validator(value: float) -> float:
             if math.isnan(value) and not allow_nan:
@@ -87,10 +84,7 @@ class FloatLike(IntLike):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_allow_inf(
-        cls,
-        allow_inf: bool,
-    ) -> Callable[[float], float]:
+    def make_validator_allow_inf(cls, allow_inf: bool) -> FuncFloatFloat:
 
         def validator(value: float) -> float:
             if math.isinf(value) and not allow_inf:
@@ -104,7 +98,7 @@ class FloatLike(IntLike):
     def make_validator_max_decimal_places(
         cls,
         max_decimal_places: int,
-    ) -> Callable[[float], float]:
+    ) -> FuncFloatFloat:
 
         def validator(value: float) -> float:
 

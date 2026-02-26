@@ -9,8 +9,10 @@ from collections.abc import Callable
 from typing import Any
 
 from ._baselike import BaseLike
-from ._common import validate_types_in_func_call
-
+from ._common import (
+    FuncAnyAny,
+    validate_types_in_func_call,
+)
 
 
 class IntLike(BaseLike):
@@ -59,7 +61,7 @@ class IntLike(BaseLike):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_is_number(cls, is_number: bool) -> Callable[[Any], Any]:
+    def make_validator_is_number(cls, is_number: bool) -> FuncAnyAny:
 
         def validator(value: Any) -> Any:
 

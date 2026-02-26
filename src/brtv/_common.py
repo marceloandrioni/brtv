@@ -14,9 +14,11 @@ from collections.abc import (
     Iterable,
 )
 from functools import wraps
+from pathlib import Path
 from typing import (
     Annotated,
     Any,
+    TypeAlias,
     get_args,
     get_origin,
     get_type_hints,
@@ -28,6 +30,13 @@ from pydantic import (
     validate_call,
 )
 from pydantic_core import InitErrorDetails
+
+FuncAnyAny: TypeAlias = Callable[[Any], Any]
+FuncIntInt: TypeAlias = Callable[[int], int]
+FuncFloatFloat: TypeAlias = Callable[[float], float]
+FuncStrStr: TypeAlias = Callable[[str], str]
+FuncPathPath: TypeAlias = Callable[[Path], Path]
+FuncListList: TypeAlias = Callable[[list[Any]], list[Any]]
 
 # Notes:
 # * Pydantic is permissive with type coercion (e.g., float "2.2" becomes 2.2),
@@ -61,7 +70,7 @@ def validate_types_in_func_call(
     validated_func = validate_call(func, config=config, validate_return=True)
     hints = get_type_hints(func, include_extras=True)
 
-    def _get_metadata(arg_name: str, metadata_name: str):
+    def _get_metadata(arg_name: str, metadata_name: str) -> Any:
 
         metadata = None
 
@@ -73,7 +82,7 @@ def validate_types_in_func_call(
 
         return metadata
 
-    def _rebuild_error_with_metadata(err):
+    def _rebuild_error_with_metadata(err) -> InitErrorDetails:
 
         loc = err.get("loc", ())
         typ = err.get("type", "value_error")
@@ -83,14 +92,16 @@ def validate_types_in_func_call(
         # In validate_call errors, loc typically starts with the argument name
         arg = loc[0] if loc else None
 
-        title = _get_metadata(arg, "title")
-        description = _get_metadata(arg, "description")
-        examples = _get_metadata(arg, "examples")
-
         extra_msg = f"\nerror type: {typ}\n"
-        extra_msg += f"field title: {title}\n" if title else ""
-        extra_msg += f"field description: {description}\n" if description else ""
-        extra_msg += f"field examples: {examples}\n" if examples else ""
+        if arg is not None:
+
+            title = _get_metadata(arg, "title")
+            description = _get_metadata(arg, "description")
+            examples = _get_metadata(arg, "examples")
+
+            extra_msg += f"field title: {title}\n" if title else ""
+            extra_msg += f"field description: {description}\n" if description else ""
+            extra_msg += f"field examples: {examples}\n" if examples else ""
 
         # IMPORTANT:
         # We can’t directly set "msg" in InitErrorDetails; pydantic-core builds it.
@@ -181,6 +192,9 @@ def validate_type(
     input_type=float]
 
     >>> validate_type(1.0, Union[int, float])
+    1.0
+
+    >>> validate_type(1.0, Annotated[float, Field(gt=0)])
     1.0
 
     """

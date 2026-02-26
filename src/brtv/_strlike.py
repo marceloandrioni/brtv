@@ -6,14 +6,18 @@ __all__ = ["StrLike"]
 
 import re
 import unicodedata
-from collections.abc import Callable, Iterable
+from collections.abc import Iterable
 from re import Pattern
 from typing import Any
 
 from multidict import MultiDict
 
 from ._baselike import BaseLikeInUserOrder
-from ._common import validate_types_in_func_call
+from ._common import (
+    FuncAnyAny,
+    FuncStrStr,
+    validate_types_in_func_call,
+)
 
 
 class StrLike(BaseLikeInUserOrder):
@@ -96,12 +100,9 @@ class StrLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_none_to_empty(
-        cls,
-        none_to_empty: bool,
-    ) -> Callable[[str], str]:
+    def make_validator_none_to_empty(cls, none_to_empty: bool) -> FuncAnyAny:
 
-        def validator(value: Any) -> str:
+        def validator(value: Any) -> Any:
             if none_to_empty and value is None:
                 return ""
             return value
@@ -110,7 +111,7 @@ class StrLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_strip(cls, strip: bool) -> Callable[[str], str]:
+    def make_validator_strip(cls, strip: bool) -> FuncStrStr:
 
         def validator(value: str) -> str:
             if strip:
@@ -121,7 +122,7 @@ class StrLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_to_upper(cls, to_upper: bool) -> Callable[[str], str]:
+    def make_validator_to_upper(cls, to_upper: bool) -> FuncStrStr:
 
         def validator(value: str) -> str:
             if to_upper:
@@ -132,7 +133,7 @@ class StrLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_to_lower(cls, to_lower: bool) -> Callable[[str], str]:
+    def make_validator_to_lower(cls, to_lower: bool) -> FuncStrStr:
 
         def validator(value: str) -> str:
             if to_lower:
@@ -143,10 +144,7 @@ class StrLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_replace(
-        cls,
-        replace: tuple[str, str],
-    ) -> Callable[[str], str]:
+    def make_validator_replace(cls, replace: tuple[str, str]) -> FuncStrStr:
 
         def validator(value: str) -> str:
             return re.sub(*replace, value)
@@ -155,10 +153,7 @@ class StrLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_remove_accents(
-        cls,
-        remove_accents: bool,
-    ) -> Callable[[str], str]:
+    def make_validator_remove_accents(cls, remove_accents: bool) -> FuncStrStr:
 
         def validator(value: str) -> str:
             if remove_accents:
@@ -173,7 +168,7 @@ class StrLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_startswith(cls, startswith: str) -> Callable[[str], str]:
+    def make_validator_startswith(cls, startswith: str) -> FuncStrStr:
 
         def validator(value: str) -> str:
             if value.startswith(startswith):
@@ -185,7 +180,7 @@ class StrLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_endswith(cls, endswith: str) -> Callable[[str], str]:
+    def make_validator_endswith(cls, endswith: str) -> FuncStrStr:
 
         def validator(value: str) -> str:
             if value.endswith(endswith):
@@ -197,10 +192,7 @@ class StrLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_pattern(
-        cls,
-        pattern: str | Pattern[str],
-    ) -> Callable[[str], str]:
+    def make_validator_pattern(cls, pattern: str | Pattern[str]) -> FuncStrStr:
 
         def validator(value: str) -> str:
             if re.match(pattern, value):
@@ -212,7 +204,7 @@ class StrLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_min_length(cls, min_length: int) -> Callable[[str], str]:
+    def make_validator_min_length(cls, min_length: int) -> FuncStrStr:
 
         def validator(value: str) -> str:
             if len(value) < min_length:
@@ -224,7 +216,7 @@ class StrLike(BaseLikeInUserOrder):
 
     @classmethod
     @validate_types_in_func_call
-    def make_validator_max_length(cls, max_length: int) -> Callable[[str], str]:
+    def make_validator_max_length(cls, max_length: int) -> FuncStrStr:
 
         def validator(value: str) -> str:
             if len(value) > max_length:
