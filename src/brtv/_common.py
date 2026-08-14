@@ -9,6 +9,7 @@ __all__ = [
     "validate_types_in_func_call",
 ]
 
+import datetime
 from collections.abc import (
     Callable,
     Iterable,
@@ -36,6 +37,7 @@ FuncIntInt: TypeAlias = Callable[[int], int]
 FuncFloatFloat: TypeAlias = Callable[[float], float]
 FuncStrStr: TypeAlias = Callable[[str], str]
 FuncPathPath: TypeAlias = Callable[[Path], Path]
+FuncDtDt: TypeAlias = Callable[[datetime.datetime], datetime.datetime]
 FuncListList: TypeAlias = Callable[[list[Any]], list[Any]]
 
 # Notes:

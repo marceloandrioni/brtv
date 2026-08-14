@@ -20,6 +20,7 @@ from ._common import (
     validate_type,
     validate_types_in_func_call,
 )
+from ._datetimelike import DatetimeLike
 from ._floatlike import FloatLike
 from ._intlike import IntLike
 from ._listlike import ListLike

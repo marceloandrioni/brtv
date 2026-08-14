@@ -366,7 +366,6 @@ class PathLike(BaseLikeInUserOrder):
         title: str | None = None,
         description: str | None = None,
         examples: list[Any] | None = None,
-        exist: bool | None = None,
         exist_as_file: bool | None = None,
         exist_as_dir: bool | None = None,
         not_exist: bool | None = None,

@@ -5,7 +5,6 @@ from __future__ import annotations
 __all__ = ["IntLike"]
 
 import numbers
-from collections.abc import Callable
 from typing import Any
 
 from ._baselike import BaseLike

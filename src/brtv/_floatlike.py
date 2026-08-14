@@ -76,7 +76,7 @@ class FloatLike(IntLike):
     def make_validator_allow_nan(cls, allow_nan: bool) -> FuncFloatFloat:
 
         def validator(value: float) -> float:
-            if math.isnan(value) and not allow_nan:
+            if not allow_nan and math.isnan(value):
                 raise ValueError("Value can't be NaN.")
             return value
 
@@ -87,7 +87,7 @@ class FloatLike(IntLike):
     def make_validator_allow_inf(cls, allow_inf: bool) -> FuncFloatFloat:
 
         def validator(value: float) -> float:
-            if math.isinf(value) and not allow_inf:
+            if not allow_inf and math.isinf(value):
                 raise ValueError("Value can't be Inf.")
             return value
 

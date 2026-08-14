@@ -180,6 +180,10 @@ class BaseLikeInUserOrder(BaseLike, ABC):
         #     ]
         # )
 
+        # @todo: the config=[pair1, pair2, pair3] is to confusing. Replace this
+        # with a factory classmethod, e.g.
+        # MyClass.from_dict(), MyClass.from_list()
+
         @wraps(func)
         def wrapper(*args, **kwargs):
 
